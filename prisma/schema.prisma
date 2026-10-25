@@ -5,7 +5,7 @@
 
 generator client {
   provider     = "prisma-client"
-  output       = "../generated/prisma"
+  output       = "../src/generated/prisma"
   moduleFormat = "cjs"
 }
 
@@ -19,12 +19,12 @@ enum Role {
 }
 
 model User {
-  id        BigInt   @id @default(autoincrement())
-  name      String   @db.VarChar(255)
-  email     String   @unique @db.VarChar(255)
-    passwordHash String   @map("password_hash") @db.VarChar(255)
-  role      Role     @default(USER)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id           BigInt   @id @default(autoincrement())
+  name         String   @db.VarChar(255)
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   posts    Post[]
   comments Comment[]
