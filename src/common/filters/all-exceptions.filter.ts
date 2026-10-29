@@ -1,23 +1,33 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { mapPrismaError } from '../errors/prisma-error.mapper.js';
 
-@Catch() // empty = catch everything, not just HttpException
+@Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
+    private readonly logger = new Logger(AllExceptionsFilter.name);
+
     catch(exception: unknown, host: ArgumentsHost) {
         const ctx = host.switchToHttp();
         const res = ctx.getResponse<Response>();
         const req = ctx.getRequest<Request>();
 
-        let statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
+        let statusCode: number = HttpStatus.INTERNAL_SERVER_ERROR;
         let message: string | string[] = 'Internal server error';
 
         if (exception instanceof HttpException) {
+            // validation errors, NotFoundException thrown by you, etc.
             statusCode = exception.getStatus();
             const body = exception.getResponse();
-            // body is a string, or an object whose "message" may be a string or an array
             message = typeof body === 'string' ? body : ((body as any).message ?? exception.message);
         } else {
-            console.error('exception:', exception); // unexpected bug: log it, but don't leak details to the client
+            const prismaError = mapPrismaError(exception);
+            if (prismaError) {
+                statusCode = prismaError.status;
+                message = prismaError.message;
+            } else {
+                // a real bug: log the details, never send them to the client
+                this.logger.error(exception instanceof Error ? exception.stack : String(exception));
+            }
         }
 
         res.status(statusCode).json({
